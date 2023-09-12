@@ -129,14 +129,10 @@
 8. **跨域问题解决**
 9. **项目扩展思路**
    1. 功能扩充
-   1. 修改bug
    1. 登录改为分布式
+   1. 全局请求拦截器
    1. 通用性
-   1. 
-
-
-
-
+   1. 修改 Bug
 
 ## 初始化
 
@@ -2038,29 +2034,83 @@ Dockerfile 编写：
 - RUN 执行命令
 - CMD / ENTRYPOINT（附加额外参数）指定运行容器时默认执行的命令
 
+
+
+1. **制作后端镜像**
+   1. 编写DockerFile
+
 ```dockerfile
-FROM maven:3.5-jdk-8-alpine
+#指定基础镜像
+FROM maven:3.5-jdk-8-alpine as builder
+#指定镜像的工作目录
 WORKDIR /app
-COPY pom.xml
+#把需要的本地文件复制到/app工作目录中
+COPY pom.xml .
 COPY src ./src
+#用RUN执行maven的打包命令,至此镜像制作完成
 RUN mvn package -DskipTests
+#之后使用该镜像运行容器时,会自动执行一下命令,启动
 CMD ["java","-jar","/app/target/userCenter-backend-0.0.1-SNAPSHOT.jar","--spring.profiles.active=prod"]
 ```
 
+​		  2. 制作镜像 	 
+
+```sh
+git clone git@github.com:1ranxu/userCenter-backend.git
+cd userCenter-backend
+#.代表,如果报错就重启一下docker
+docker build -f ./DockerFile . -t user-center-backend:v0.0.1
+```
+
+![image-20230912152608630](assets/image-20230912152608630.png)
+
+​      	3.运行容器
+
+```sh
+docker run -p 80:80 -d user-center-backend:v0.0.1
+```
+
+​		4.进入容器
+
+```sh
+docker exec -i -t 容器id /bin/bash
+```
+
+2. **制作前端镜像**
+   1. 编写DockerFile
+
 ```dockerfile
+#指定基础镜像
 FROM nginx
-
-WORKDIR /usr/local/nginx/html/
-USER root
-
+#指定工作目录
+WORKDIR /usr/share/nginx/html/
+#把本地自定义的nginx.conf替换nginx镜像里的nginx.conf
 COPY ./docker/nginx.conf /etc/nginx/conf.d/default.conf
-
-COPY ./dist  /usr/local/nginx/html/
-
+#把build好的dist目录放到nginx的默认html目录,建议直接在本地先build,再上传,不然会很慢
+COPY ./dist  /usr/share/nginx/html/
+#显示的告诉别人我这个项目占用了80端口
 EXPOSE 80
-
+#使用镜像运行容器时自动执行,启动nginx
 CMD ["nginx", "-g", "daemon off;"]
 ```
+
+​		2.制作镜像
+
+```
+git clone git@github.com:1ranxu/userCenter-frontend.git
+cd userCenter-frontend/
+docker build -f ./docker/DockerFile . -t user-center-frontend:v0.0.1
+```
+
+![image-20230912160533548](assets/image-20230912160533548.png)		
+
+​		3.运行
+
+```sh
+docker run -p 80:80 -d user-center-frontend:v0.0.1
+```
+
+nginx.conf
 
 ```
 server {
@@ -2078,20 +2128,26 @@ server {
     include /etc/nginx/mime.types;
 
     location / {
+    	#只要用户找不到文件,就降级取访问index.html
         try_files $uri /index.html;
+        proxy_pass http://127.0.0.1:8080/api/;
+    	add_header 'Access-Control-Allow-Origin' $http_origin;
+    	add_header 'Access-Control-Allow-Credentials' 'true';
+    	add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS';
+    	add_header Access-Control-Allow-Headers '*';
+    	if ($request_method = 'OPTIONS') {
+        	add_header 'Access-Control-Allow-Credentials' 'true';
+        	add_header 'Access-Control-Allow-Origin' $http_origin;
+        	add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+        	add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range';
+        	add_header 'Access-Control-Max-Age' 1728000;
+        	add_header 'Content-Type' 'text/plain; charset=utf-8';
+        	add_header 'Content-Length' 0;
+        return 204;
+    	}
     }
 
 }
-```
-
-根据 Dockerfile 构建镜像：
-
-```
-# 后端
-docker build -t userCenter-backend:v0.0.1 .
-
-# 前端
-docker build -t userCenter-frontend:v0.0.1 .
 ```
 
 Docker 构建优化：减少尺寸、减少构建时间（比如多阶段构建，可以丢弃之前阶段不需要的内容）
