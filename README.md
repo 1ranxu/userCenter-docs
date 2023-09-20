@@ -2291,43 +2291,95 @@ nginx 反向代理：替服务器接收请求，转发请求
 
 分布式Session是一种实现单点登录的技术，它允许用户在多个应用程序之间共享会话信息。使用Redis作为存储Session的数据库，可以实现高性能、高可用性和可扩展性。
 
-1. **前端**
+1. **后端**
 
-   ![image-20230911160832584](assets/image-20230911160832584.png)
+   1. 引入依赖
 
-   ![image-20230911162031624](assets/image-20230911162031624.png)
+      ```java
+      <!--hutool-->
+      <dependency>
+          <groupId>cn.hutool</groupId>
+          <artifactId>hutool-all</artifactId>
+          <version>5.7.17</version>
+      </dependency>
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-data-redis</artifactId>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.springframework.session/spring-session-data-redis -->
+      <dependency>
+          <groupId>org.springframework.session</groupId>
+          <artifactId>spring-session-data-redis</artifactId>
+          <version>2.7.0</version>
+      </dependency>
+      ```
 
-   ![image-20230911162151547](assets/image-20230911162151547.png)
+   2. 修改配置
 
-2. **后端**
+      ```yml
+      spring:
+        redis:
+          host: 127.0.0.1
+          port: 6379
+          password: 123
+          database: 0
+          lettuce:
+            pool:
+              max-active: 10
+              max-idle: 10
+              min-idle: 1
+              time-between-eviction-runs: 10s
+        session:
+          timeout: 86400 #session失效时间
+          store-type: redis
+      ```
 
-   ![image-20230911164100963](assets/image-20230911164100963.png)
+   3. 创建一个UserDTO类用存储脱敏后的用户信息
 
-   ![image-20230911164148857](assets/image-20230911164148857.png)
+      ```java
+      @Data
+      public class UserDTO implements Serializable {
+          private Long id;
+      
+          private String userAccount;
+      
+          private String username;
+      
+          private String avatarUrl;
+      
+          private Integer gender;
+      
+          private String phone;
+      
+          private String email;
+      
+          private Integer userStatus;
+      
+          private Date createTime;
+      
+          private Integer userRole;
+      
+          private String authCode;
+      
+          private String tags;
+      
+          private String profile;
+      
+          private static final long serialVersionUID = 1L;
+      }
+      ```
 
-   ![image-20230911162554199](assets/image-20230911162554199.png)
+   4. 修改UserServiceImpl中的userLogin方法
 
-   ![image-20230911162900658](assets/image-20230911162900658.png)
-
-   ![image-20230911163303727](assets/image-20230911163303727.png)
-
-   ![image-20230911163423990](assets/image-20230911163423990.png)
-
-   ![image-20230911163729494](assets/image-20230911163729494.png)
-
-   ![image-20230911163919227](assets/image-20230911163919227.png)
-
-   
+      ![image-20230920144106134](assets/image-20230920144106134.png)
 
 ### 后台添加全局请求拦截器（统一去判断用户权限、记录请求日志）
 
-![image-20230911165410724](assets/image-20230911165410724.png)
+![image-20230920145046303](assets/image-20230920145046303.png)
 
-![image-20230911165556696](assets/image-20230911165556696.png)
+![image-20230920145454579](assets/image-20230920145454579.png)
 
-![image-20230911170110580](assets/image-20230911170110580.png)
-
-![image-20230911170339696](assets/image-20230911170339696.png)
+![image-20230920144842900](assets/image-20230920144842900.png)
 
 ### 通用性
 
