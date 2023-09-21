@@ -2190,7 +2190,7 @@ nginx 反向代理：替服务器接收请求，转发请求
 
 1. 把域名、端口改成相同的
 
-让服务器告诉浏览器：允许跨域（返回 cross-origin-allow 响应头）
+让服务器告诉浏览器：允许跨域（返回 Access-control-allow-origin- 响应头）
 
 2. 网关支持（Nginx）
 
@@ -2295,17 +2295,19 @@ nginx 反向代理：替服务器接收请求，转发请求
 
    1. 引入依赖
 
-      ```java
+      ```xml
       <!--hutool-->
       <dependency>
           <groupId>cn.hutool</groupId>
           <artifactId>hutool-all</artifactId>
           <version>5.7.17</version>
       </dependency>
+      <!--引入 redis，能够操作 redis：-->
       <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-data-redis</artifactId>
       </dependency>
+      <!--引入 spring-session 和 redis 的整合，使得自动将 session 存储到 redis 中：-->
       <!-- https://mvnrepository.com/artifact/org.springframework.session/spring-session-data-redis -->
       <dependency>
           <groupId>org.springframework.session</groupId>
@@ -2315,7 +2317,7 @@ nginx 反向代理：替服务器接收请求，转发请求
       ```
 
    2. 修改配置
-
+   
       ```yml
       spring:
         redis:
@@ -2331,11 +2333,11 @@ nginx 反向代理：替服务器接收请求，转发请求
               time-between-eviction-runs: 10s
         session:
           timeout: 86400 #session失效时间
-          store-type: redis
+          store-type: redis #默认是 none，表示存储在单台服务器；red表示从 redis 读写 session
       ```
 
    3. 创建一个UserDTO类用存储脱敏后的用户信息
-
+   
       ```java
       @Data
       public class UserDTO implements Serializable {
@@ -2370,16 +2372,14 @@ nginx 反向代理：替服务器接收请求，转发请求
       ```
 
    4. 修改UserServiceImpl中的userLogin方法
-
+   
       ![image-20230920144106134](assets/image-20230920144106134.png)
 
 ### 后台添加全局请求拦截器（统一去判断用户权限、记录请求日志）
 
 ![image-20230920145046303](assets/image-20230920145046303.png)
 
-![image-20230920145454579](assets/image-20230920145454579.png)
-
-![image-20230920144842900](assets/image-20230920144842900.png)
+![image-20230921115159593](assets/image-20230921115159593.png)
 
 ### 通用性
 
